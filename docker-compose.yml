@@ -1,0 +1,12 @@
+services:
+  cryptomessenger:
+    build: .
+    container_name: cryptomessenger_app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./server/certs:/app/certs
+      - ./server:/app
+      - ./client:/client
+      - /app/node_modules
+    restart: unless-stopped
