@@ -1,0 +1,7 @@
+﻿services:
+  cryptomessenger:
+    build: .
+    container_name: cryptomessenger_app
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
