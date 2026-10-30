@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿services:
   cryptomessenger:
     build: .
@@ -5,3 +6,17 @@
     ports:
       - "3000:3000"
     restart: unless-stopped
+=======
+services:
+  cryptomessenger:
+    build: .
+    container_name: cryptomessenger_app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./server/certs:/app/certs
+      - ./server:/app
+      - ./client:/client
+      - /app/node_modules
+    restart: unless-stopped
+>>>>>>> 3fe452332384e4a7da463e94d62970786e0e0d6b
