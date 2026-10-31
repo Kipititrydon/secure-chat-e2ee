@@ -7,50 +7,54 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// CORRECTION : Servir les fichiers statiques depuis le dossier 'client'
+// Servir les fichiers statiques depuis le dossier 'client'
 app.use(express.static(path.join(__dirname, 'client')));
 
-// Tableau pour stocker les utilisateurs connectés
+// Tableau pour stocker les utilisateurs connectés { id, name }
 let users = [];
 
 io.on('connection', (socket) => {
     console.log(`Nouvelle connexion établie : ${socket.id}`);
 
-    // Enregistrement d'un utilisateur avec son pseudo et ses clés publiques (ECDH & ECDSA)
-    socket.on('register', (userData) => {
+    // 1. Enregistrement de l'utilisateur avec son pseudo
+    socket.on('register_user', (username) => {
         users.push({
             id: socket.id,
-            username: userData.username,
-            publicKey: userData.publicKey
+            name: username
         });
-
-        // Diffuser la liste actualisée de tous les utilisateurs connectés
-        io.emit('user-list', users);
+        // Diffuser la liste actualisée à tout le monde
+        io.emit('update_users', users);
     });
 
-    // Relais sécurisé des messages chiffrés de bout en bout entre pairs
-    socket.on('encrypted-message', (data) => {
-        io.to(data.targetId).emit('encrypted-message', {
+    // 2. Relais des clés publiques (ECDH & ECDSA) entre pairs
+    socket.on('share_keys', (data) => {
+        io.to(data.targetId).emit('receive_keys', {
             senderId: socket.id,
-            ciphertext: data.ciphertext,
-            iv: data.iv,
-            signature: data.signature,
-            counter: data.counter,
-            timestamp: data.timestamp
+            ecdhPub: data.ecdhPub,
+            ecdsaPub: data.ecdsaPub
         });
     });
 
-    // Gestion de la déconnexion d'un utilisateur
+    // 3. Relais sécurisé des messages chiffrés et signés
+    socket.on('send_message', (data) => {
+        const sender = users.find(u => u.id === socket.id);
+        const senderName = sender ? sender.name : "Inconnu";
+
+        io.to(data.targetId).emit('receive_message', {
+            senderId: socket.id,
+            senderName: senderName,
+            data: data.data
+        });
+    });
+
+    // 4. Gestion de la déconnexion
     socket.on('disconnect', () => {
         console.log(`Utilisateur déconnecté : ${socket.id}`);
         users = users.filter(u => u.id !== socket.id);
-        
-        // Mettre à jour la liste des utilisateurs pour tout le monde
-        io.emit('user-list', users);
+        io.emit('update_users', users);
     });
 });
 
-// Utilisation du port dynamique pour l'hébergement cloud (Render/Railway) ou 3000 en local
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`🚀 Serveur démarré et en écoute sur le port ${PORT}`);
